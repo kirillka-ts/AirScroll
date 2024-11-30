@@ -1,13 +1,12 @@
 from pynput.mouse import Button, Controller as MouseController
 from pynput.keyboard import Controller as KeyboardController
-from math import hypot
-import time
 
 
 class SystemController:
     def __init__(self):
         self.mouse = MouseController()
         self.keyboard = KeyboardController()
+        self.left_button_pressed = False
 
     @property
     def x(self) -> float:
@@ -26,15 +25,10 @@ class SystemController:
         self.set_position_cursor(self.x, y)
 
     def move_cursor(self, x: float, y: float) -> None:
-        lengh = int(hypot(self.x, self.y))
-        x_change = x / lengh
-        y_change = y / lengh
-        for _ in range(lengh):
-            self.mouse.move(x_change, y_change)
-            time.sleep(0.0015)
+        self.mouse.move(x, y)
 
     def set_position_cursor(self, x: float, y: float) -> None:
-        self.move_cursor(x - self.x, y - self.y)
+        self.mouse.position = (x, y)
 
     def click(self) -> None:
         self.mouse.click(Button.left)
@@ -52,9 +46,14 @@ class SystemController:
             return result
         return wrapper
 
-    @__hold_click
-    def drag_object(self, x: float, y: float) -> None:
-        self.move_cursor(x, y)
+    def start_dragging_object(self) -> None:
+        if not self.left_button_pressed:
+            self.mouse.press(Button.left)
+            self.left_button_pressed = True
+
+    def stop_dragging_object(self) -> None:
+        self.mouse.release(Button.left)
+        self.left_button_pressed = False
 
 
 if __name__ == "__main__":
