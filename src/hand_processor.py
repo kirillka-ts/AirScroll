@@ -15,9 +15,19 @@ class HandProcessor:
         )
         self.mp_draw = mp.solutions.drawing_utils
         self.cap = cv2.VideoCapture(1)
+        self.cursor = (0, 0)
         self.state = 'movement'
         self.__state = 'movement'
         self.last_time = -1
+
+    def put_text(self, frame, text: str) -> None:
+        cv2.putText(
+            frame,
+            text,
+            (50, 50),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1, (0, 255, 0), 2
+        )
 
     def dist(self, point1: tuple, point2: tuple) -> float:
         return math.hypot(point1[0] - point2[0], point1[1] - point2[1])
@@ -28,6 +38,12 @@ class HandProcessor:
         return screen_x, screen_y
 
     def update_fingers_indexes(self) -> None:
+        self.middle_finger_tip = self.hand_landmarks.landmark[
+            self.mp_hands.HandLandmark.MIDDLE_FINGER_TIP
+        ]
+        self.middle_finger_tip = self.normalize_coordinates(
+            self.middle_finger_tip.x, self.middle_finger_tip.y
+        )
         self.index_finger_tip = self.hand_landmarks.landmark[
             self.mp_hands.HandLandmark.INDEX_FINGER_TIP
         ]
@@ -61,17 +77,18 @@ class HandProcessor:
                 if time.time() - self.last_time > 0.3:
                     self.state = 'drag'
                     self.__state = 'drag'
-                    # self.last_time = time.time()
             if self.__state != 'drag' and self.__state != 'click':
                 self.__state = 'click'
                 self.last_time = time.time()
+        elif self.are_fingers_pinned([self.index_finger_tip, self.middle_finger_tip]):
+            self.state = 'scroll'
         else:
             if self.__state == 'click':
                 self.state = 'click'
             else:
                 self.default_state()
 
-    def start_video(self):
+    def start_video(self) -> None:
         while True:
             ret, frame = self.cap.read()
             if not ret:
@@ -95,20 +112,30 @@ class HandProcessor:
                     case 'click':
                         self.system_controller.click()
                         self.default_state()
-                        cv2.putText(frame, "Click!", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                        self.put_text(frame, "Click!")
+                     
                     case 'drag':
                         self.system_controller.start_dragging_object()
-                        cv2.putText(frame, "Dragging!", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                        self.put_text(frame, "Dragging!")
+
+                    case 'scroll':
+                        self.system_controller.scroll(
+                            0.1 * (self.cursor[1] - self.index_finger_tip[1])
+                        )
+                        self.put_text(frame, "Scrolling!")
 
                     case 'movement':
                         self.system_controller.stop_dragging_object()
- 
-                if True:
+
+                if self.state != 'scroll':
+                    self.cursor = self.index_finger_tip
                     self.system_controller.set_position_cursor(
-                        self.index_finger_tip[0], self.index_finger_tip[1]
+                        self.cursor[0], self.cursor[1]
                     )
 
-                # self.mp_draw.draw_landmarks(frame, self.hands, self.mp_hands.HAND_CONNECTIONS)
+            self.mp_draw.draw_landmarks(
+                frame, self.hand_landmarks, self.mp_hands.HAND_CONNECTIONS
+            )
 
             cv2.imshow("Hand Tracking as Trackpad", frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
