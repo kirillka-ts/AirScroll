@@ -31,7 +31,7 @@ class HandProcessor:
 
     def dist(self, point1: tuple, point2: tuple) -> float:
         return math.hypot(point1[0] - point2[0], point1[1] - point2[1])
-        
+
     def normalize_coordinates(self, x: float, y: float) -> tuple:
         screen_x = int(x * self.width)
         screen_y = int(y * self.height)
@@ -88,7 +88,7 @@ class HandProcessor:
             else:
                 self.default_state()
 
-    def start_video(self) -> None:
+    def start_video(self, debug: bool = False) -> None:
         while True:
             ret, frame = self.cap.read()
             if not ret:
@@ -113,7 +113,7 @@ class HandProcessor:
                         self.system_controller.click()
                         self.default_state()
                         self.put_text(frame, "Click!")
-                     
+
                     case 'drag':
                         self.system_controller.start_dragging_object()
                         self.put_text(frame, "Dragging!")
@@ -133,20 +133,24 @@ class HandProcessor:
                         self.cursor[0], self.cursor[1]
                     )
 
-            self.mp_draw.draw_landmarks(
-                frame, self.hand_landmarks, self.mp_hands.HAND_CONNECTIONS
-            )
+                self.mp_draw.draw_landmarks(
+                    frame, self.hand_landmarks, self.mp_hands.HAND_CONNECTIONS
+                )
 
-            cv2.imshow("Hand Tracking as Trackpad", frame)
+            if debug:
+                cv2.imshow("Hand Tracking as Trackpad", frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
         self.cap.release()
         cv2.destroyAllWindows()
 
+
 def main():
     hand_processor = HandProcessor()
     hand_processor.start_video()
 
+
 if __name__ == "__main__":
     main()
+
