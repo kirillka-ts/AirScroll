@@ -14,7 +14,7 @@ class HandProcessor:
             min_detection_confidence=0.7
         )
         self.mp_draw = mp.solutions.drawing_utils
-        self.cap = cv2.VideoCapture(1)
+        self.cap = cv2.VideoCapture(0)
         self.cursor = (0, 0)
         self.state = 'movement'
         self.__state = 'movement'
@@ -80,7 +80,9 @@ class HandProcessor:
             if self.__state != 'drag' and self.__state != 'click':
                 self.__state = 'click'
                 self.last_time = time.time()
-        elif self.are_fingers_pinned([self.index_finger_tip, self.middle_finger_tip]):
+        elif self.are_fingers_pinned(
+            [self.index_finger_tip, self.middle_finger_tip], threshold=45
+        ):
             self.state = 'scroll'
         else:
             if self.__state == 'click':
@@ -128,10 +130,11 @@ class HandProcessor:
                         self.system_controller.stop_dragging_object()
 
                 if self.state != 'scroll':
-                    self.cursor = self.index_finger_tip
-                    self.system_controller.set_position_cursor(
-                        self.cursor[0], self.cursor[1]
-                    )
+                    if self.dist(self.cursor, self.index_finger_tip) > 3:
+                        self.cursor = self.index_finger_tip
+                        self.system_controller.set_position_cursor(
+                            self.cursor[0], self.cursor[1]
+                        )
 
                 self.mp_draw.draw_landmarks(
                     frame, self.hand_landmarks, self.mp_hands.HAND_CONNECTIONS
