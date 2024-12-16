@@ -28,7 +28,7 @@
     ```bash
     python3 src/hand_processor.py
 
-—
+---
 
 # Использование
 
